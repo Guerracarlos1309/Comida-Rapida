@@ -5,67 +5,232 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ══════════════════════════════════════
+   TAVO'S HOT DOG — Paleta de Colores
+   Dark:  Navy #0e1628  (fondo del logo)
+   Light: Azul muy claro #eef4fb
+   Acento: azul eléctrico #00cfff · amarillo #ffd000
+   ══════════════════════════════════════ */
+
 :root {
-  color-scheme: dark;
+  /* Dark palette (logo background) */
+  --tavo-navy:   #0e1628;
+  --tavo-navy2:  #131d34;
+  --tavo-navy3:  #1a2545;
+  --tavo-border: #1e2d54;
+
+  /* Light palette (tinted from logo colors) */
+  --tavo-light:      #eef4fb;  /* page background */
+  --tavo-light2:     #ddeaf8;  /* card surface */
+  --tavo-light3:     #cfe0f5;  /* hover surface */
+  --tavo-light-border: #b8d0eb; /* borders */
+  --tavo-light-text:   #0a1628; /* primary text = navy itself */
+
+  /* Shared accents */
+  --accent-blue:   #00cfff;
+  --accent-yellow: #ffd000;
+  --accent-pink:   #ff2d6b;
+  --accent-orange: #ff7020;
+
+  color-scheme: dark light;
 }
 
 body {
   margin: 0;
   padding: 0;
-  background-color: #0c0c0f;
-  color: #f3f4f6;
+  background-color: var(--tavo-navy);
+  color: #ffffff;
   font-family: 'Outfit', 'Inter', sans-serif;
   overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
+
+html.light body {
+  background-color: var(--tavo-light);
+  color: var(--tavo-light-text);
+}
+
+html.dark body {
+  background-color: var(--tavo-navy);
+  color: #ffffff;
+}
+
+/* ══════════════════════════════════════
+   Global dark-mode surface overrides
+   Replaces Tailwind's black/zinc with navy
+   ══════════════════════════════════════ */
+html.dark .bg-black        { background-color: var(--tavo-navy)  !important; }
+html.dark .bg-zinc-950     { background-color: var(--tavo-navy)  !important; }
+html.dark .bg-zinc-900     { background-color: var(--tavo-navy2) !important; }
+html.dark .bg-zinc-800     { background-color: var(--tavo-navy3) !important; }
+html.dark .border-zinc-900 { border-color: var(--tavo-border)    !important; }
+html.dark .border-zinc-800 { border-color: var(--tavo-border)    !important; }
+
+/* Transparent/blur overlays — navy-ised */
+html.dark .bg-black\/90  { background-color: rgba(14, 22, 40, 0.90) !important; }
+html.dark .bg-black\/85  { background-color: rgba(14, 22, 40, 0.85) !important; }
+html.dark .bg-black\/80  { background-color: rgba(14, 22, 40, 0.80) !important; }
+html.dark .bg-zinc-900\/90 { background-color: rgba(19, 29, 52, 0.90) !important; }
+
+/* ══════════════════════════════════════
+   Accent color override: orange → electric blue #00cfff
+   Keep amber/yellow for food prices (those stay warm)
+   ══════════════════════════════════════ */
+html.dark .text-orange-500,
+html.dark .text-orange-400,
+html.dark .text-orange-600 { color: #00cfff !important; }
+
+html.dark .border-orange-500,
+html.dark .border-orange-400,
+html.dark .border-orange-300 { border-color: #00cfff !important; }
+
+html.dark .ring-orange-500\/20 { --tw-ring-color: rgba(0, 207, 255, 0.20) !important; }
+
+html.dark .bg-orange-500\/10 { background-color: rgba(0, 207, 255, 0.10) !important; }
+html.dark .bg-orange-500\/20 { background-color: rgba(0, 207, 255, 0.12) !important; }
+html.dark .bg-orange-500\/30 { background-color: rgba(0, 207, 255, 0.15) !important; }
+
+/* Gradient buttons — swap orange/amber for electric blue */
+html.dark .from-orange-600 { --tw-gradient-from: #0083cc !important; }
+html.dark .to-amber-500    { --tw-gradient-to:   #00cfff !important; }
+html.dark .via-amber-500   { --tw-gradient-via:  #0099e6 !important; }
+html.dark .from-orange-500 { --tw-gradient-from: #0083cc !important; }
+html.dark .to-amber-400    { --tw-gradient-to:   #00cfff !important; }
+html.dark .from-orange-500\/30 { --tw-gradient-from: rgba(0, 131, 204, 0.30) !important; }
+
+/* Shadow glows — orange shadows → blue */
+html.dark .shadow-orange-600\/30 { --tw-shadow-color: rgba(0, 131, 204, 0.35) !important; }
+html.dark .shadow-orange-600\/40 { --tw-shadow-color: rgba(0, 131, 204, 0.40) !important; }
+
+/* ══════════════════════════════════════
+   LIGHT MODE surface overrides
+   Pale blue-navy tones from the logo
+   ══════════════════════════════════════ */
+html.light .bg-white       { background-color: var(--tavo-light)  !important; }
+html.light .bg-zinc-50     { background-color: var(--tavo-light2) !important; }
+html.light .bg-zinc-100    { background-color: var(--tavo-light3) !important; }
+html.light .border-zinc-200 { border-color: var(--tavo-light-border) !important; }
+html.light .border-zinc-300 { border-color: var(--tavo-light-border) !important; }
+html.light .text-zinc-900  { color: var(--tavo-light-text) !important; }
+html.light .text-zinc-800  { color: #0f2040 !important; }
+html.light .text-zinc-700  { color: #1a3560 !important; }
+html.light .text-zinc-600  { color: #2a4a7f !important; }
+html.light .text-zinc-500  { color: #3a5a99 !important; }
+html.light .text-zinc-400  { color: #4a6aaa !important; }
+
+/* Light mode accent: orange → electric blue (readable on light bg) */
+html.light .text-orange-500,
+html.light .text-orange-400,
+html.light .text-orange-600 { color: #007aaa !important; }
+
+html.light .border-orange-500,
+html.light .border-orange-400,
+html.light .border-orange-300 { border-color: #0099cc !important; }
+
+html.light .bg-orange-500\/10 { background-color: rgba(0, 150, 200, 0.10) !important; }
+html.light .bg-orange-500\/20 { background-color: rgba(0, 150, 200, 0.14) !important; }
+
+/* Light gradient buttons → deeper blue */
+html.light .from-orange-600 { --tw-gradient-from: #0070a0 !important; }
+html.light .to-amber-500    { --tw-gradient-to:   #00aad4 !important; }
+html.light .from-orange-500 { --tw-gradient-from: #0070a0 !important; }
+html.light .to-amber-400    { --tw-gradient-to:   #00aad4 !important; }
+html.light .via-amber-500   { --tw-gradient-via:  #008abf !important; }
+
+html.light .shadow-orange-600\/30 { --tw-shadow-color: rgba(0, 122, 170, 0.30) !important; }
+html.light .shadow-orange-600\/40 { --tw-shadow-color: rgba(0, 122, 170, 0.38) !important; }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #121217;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #2b2b36;
+  background: var(--tavo-border);
   border-radius: 4px;
 }
+html.light ::-webkit-scrollbar-thumb {
+  background: #d4d4d8;
+}
 ::-webkit-scrollbar-thumb:hover {
-  background: #ff5722;
+  background: var(--accent-orange);
 }
 
-/* Glassmorphism utility */
+/* Glassmorphism utilities */
 .glass-panel {
-  background: rgba(22, 22, 29, 0.75);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+html.dark .glass-panel {
+  background: rgba(14, 22, 40, 0.9);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-color: rgba(30, 45, 84, 0.9);
+}
+html.light .glass-panel {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.06);
 }
 
 .glass-card {
-  background: rgba(26, 26, 35, 0.85);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
+html.dark .glass-card {
+  background: var(--tavo-navy2);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--tavo-border);
+}
+html.light .glass-card {
+  background: #ffffff;
+  backdrop-filter: blur(12px);
+  border: 1px solid #e4e4e7;
+  box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.05);
+}
 
-.glass-card:hover {
-  border-color: rgba(255, 87, 34, 0.4);
-  transform: translateY(-4px);
-  box-shadow: 0 12px 30px -10px rgba(255, 87, 34, 0.25);
+html.dark .glass-card:hover {
+  border-color: var(--accent-orange);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 30px -10px rgba(255, 112, 32, 0.35);
+}
+html.light .glass-card:hover {
+  border-color: rgba(255, 112, 32, 0.6);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 30px -10px rgba(255, 112, 32, 0.15);
 }
 
 /* Gradient Text */
 .gradient-text-orange {
-  background: linear-gradient(135deg, #ff9800 0%, #ff5722 50%, #e53935 100%);
+  /* light mode: deep blue → cyan (readable) */
+  background: linear-gradient(135deg, #005f8a 0%, #007aaa 50%, #00aad4 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+html.dark .gradient-text-orange {
+  /* dark mode: yellow → cyan */
+  background: linear-gradient(135deg, #ffd000 0%, #00cfff 60%, #00a8e8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .gradient-text-gold {
   background: linear-gradient(135deg, #ffe082 0%, #ffc107 50%, #ff9800 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
+
+/* Neon glow shadows */
+.glow-orange { box-shadow: 0 0 20px rgba(255, 112, 32, 0.5); }
+.glow-pink   { box-shadow: 0 0 20px rgba(255, 45, 107, 0.5); }
+.glow-yellow { box-shadow: 0 0 20px rgba(255, 208, 0, 0.5); }
 
 /* Hide scrollbar but keep functionality */
 .scrollbar-none {
@@ -79,7 +244,6 @@ body {
 /* Thin scrollbar for wider containers */
 .scrollbar-thin {
   scrollbar-width: thin;
-  scrollbar-color: #374151 #111827;
 }
 
 /* Touch improvements for mobile */
@@ -87,14 +251,14 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-button, a {
+button, a, select, input {
   touch-action: manipulation;
 }
 
 /* Safe area padding for notched phones */
 @supports (padding: env(safe-area-inset-bottom)) {
   .safe-bottom {
-    padding-bottom: env(safe-area-inset-bottom);
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
   }
 }
 
@@ -106,11 +270,24 @@ button, a {
   z-index: 10;
 }
 
-.leaflet-tile {
-  filter: brightness(0.85) contrast(1.1) saturate(1.2);
+html.dark .leaflet-tile {
+  filter: brightness(0.8) contrast(1.1) saturate(1.2);
+}
+
+html.light .leaflet-tile {
+  filter: brightness(1) contrast(1) saturate(1);
 }
 
 /* Glowing Neon Badges */
 .badge-neon {
-  box-shadow: 0 0 12px rgba(255, 87, 34, 0.5);
+  box-shadow: 0 0 12px rgba(255, 112, 32, 0.5);
+}
+
+/* Animate spinning */
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.animate-spin-slow {
+  animation: spin-slow 4s linear infinite;
 }

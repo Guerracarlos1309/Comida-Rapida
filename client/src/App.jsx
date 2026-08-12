@@ -1,85 +1,49 @@
-import React, { useState, useEffect } from 'react';
-import { AuthProvider } from './context/AuthContext';
-import { CartProvider } from './context/CartContext';
-import { CurrencyProvider } from './context/CurrencyContext';
+import React, { useState } from "react";
+import { AuthProvider } from "./context/AuthContext";
+import { CartProvider, useCart } from "./context/CartContext";
+import { CurrencyProvider, useCurrency } from "./context/CurrencyContext";
+import { ThemeProvider, useTheme } from "./context/ThemeContext";
+import { ShoppingBag } from "lucide-react";
 
-import Navbar from './components/Navbar';
-import Hero from './components/Hero';
-import BusinessSelector from './components/BusinessSelector';
-import MenuSection from './components/MenuSection';
-import CartDrawer from './components/CartDrawer';
-import CheckoutModal from './components/CheckoutModal';
-import AuthModal from './components/AuthModal';
-import OrderTracker from './components/OrderTracker';
-import AdminDashboard from './components/AdminDashboard';
-import Footer from './components/Footer';
+import Navbar from "./components/Navbar";
+import Hero from "./components/Hero";
+import MenuSection from "./components/MenuSection";
+import CartDrawer from "./components/CartDrawer";
+import CheckoutModal from "./components/CheckoutModal";
+import AuthModal from "./components/AuthModal";
+import OrderTracker from "./components/OrderTracker";
+import AdminDashboard from "./components/AdminDashboard";
+import Footer from "./components/Footer";
+
+// Single business config — each business will have its own independent page
+export const BUSINESS = {
+  id: 1,
+  name: "Tavos Hot-Dogs",
+  slug: "tavos-hot",
+  tagline: "Los mejores Perros calientes del municipio Andrés Bello",
+  description: "Especialistas en Perros calientes cargados con todo.",
+  logo_url: "/images/burger_hero.png",
+  banner_url: "/images/burger_hero.png",
+  phone: "+58 424 784 2726",
+  address: "Calle 100 #15-24, Zona Gourmet",
+  rating: 4.9,
+  delivery_fee_usd: 2.5,
+};
 
 function MainApp() {
-  const [businesses, setBusinesses] = useState([
-    {
-      id: 1,
-      name: 'Smash & Dog Gourmet',
-      slug: 'smash-dog',
-      tagline: 'Las mejores Hamburguesas Smash y Perros Calientes Artesanales',
-      description: 'Especialistas en hamburguesas doble carne smash con queso fundido y perros calientes venezolanos/colombianos cargados con todo.',
-      logo_url: '/images/burger_hero.png',
-      banner_url: '/images/burger_hero.png',
-      phone: '+57 300 123 4567',
-      address: 'Calle 100 #15-24, Zona Gourmet',
-      rating: 4.9,
-      delivery_fee_usd: 2.50
-    },
-    {
-      id: 2,
-      name: 'El Rey del Perro Caliente',
-      slug: 'el-rey-del-perro',
-      tagline: 'Perros Calientes Gigantes y Salvajes',
-      description: 'Perros calientes especiales con salchicha suiza, tocineta ahumada, queso fundido, papa fosforito y huevo de codorniz.',
-      logo_url: '/images/hotdog_hero.png',
-      banner_url: '/images/hotdog_hero.png',
-      phone: '+58 414 123 4567',
-      address: 'Av. Principal Las Mercedes, Edif. Fast Food',
-      rating: 4.8,
-      delivery_fee_usd: 2.00
-    },
-    {
-      id: 3,
-      name: 'Urban Smash Burger',
-      slug: 'urban-smash',
-      tagline: 'Hamburguesas Urbanas y Papas Cargadas',
-      description: 'Hamburguesas con carne madurada, queso cheddar derretido, tocino crujiente y cebolla caramelizada.',
-      logo_url: '/images/combo_hero.png',
-      banner_url: '/images/combo_hero.png',
-      phone: '+1 305 123 4567',
-      address: '777 Brickell Ave, Miami, FL',
-      rating: 5.0,
-      delivery_fee_usd: 3.00
-    }
-  ]);
+  const { isDark } = useTheme();
+  const { totalItemsCount, subtotalUsd, isCartOpen, setIsCartOpen } = useCart();
+  const { formatPrice } = useCurrency();
 
-  const [activeBusiness, setActiveBusiness] = useState(businesses[0]);
-  const [viewMode, setViewMode] = useState('menu'); // 'menu' or 'kitchen'
+  const [viewMode, setViewMode] = useState("menu"); // 'menu' or 'kitchen'
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [activeTrackerOrder, setActiveTrackerOrder] = useState(null);
 
-  useEffect(() => {
-    // Fetch businesses from API if available
-    fetch('/api/businesses')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data) && data.length > 0) {
-          setBusinesses(data);
-          setActiveBusiness(data[0]);
-        }
-      })
-      .catch(err => console.log('Usando datos de negocios iniciales'));
-  }, []);
-
   const handleExploreMenu = () => {
-    setViewMode('menu');
-    const menuEl = document.getElementById('menu');
+    setViewMode("menu");
+    const menuEl = document.getElementById("menu");
     if (menuEl) {
-      menuEl.scrollIntoView({ behavior: 'smooth' });
+      menuEl.scrollIntoView({ behavior: "smooth" });
     }
   };
 
@@ -89,54 +53,61 @@ function MainApp() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0c0c0f] text-slate-100 flex flex-col justify-between selection:bg-orange-500 selection:text-white">
-      
+    <div
+      style={isDark ? { backgroundColor: '#0e1628' } : { backgroundColor: '#eef4fb', color: '#0a1628' }}
+      className={`min-h-screen flex flex-col justify-between selection:bg-sky-400 selection:text-white transition-colors duration-300 ${
+        isDark ? "text-slate-100" : "text-[#0a1628]"
+      }`}
+    >
       {/* Navbar */}
-      <Navbar
-        activeBusiness={activeBusiness}
-        businesses={businesses}
-        onSelectBusiness={setActiveBusiness}
-        viewMode={viewMode}
-        setViewMode={setViewMode}
-      />
+      <Navbar viewMode={viewMode} setViewMode={setViewMode} />
 
       {/* Main Content */}
       <main className="flex-1">
-        {viewMode === 'menu' ? (
+        {viewMode === "menu" ? (
           <>
-            <Hero
-              activeBusiness={activeBusiness}
-              onExploreMenu={handleExploreMenu}
-            />
-
-            <BusinessSelector
-              businesses={businesses}
-              activeBusiness={activeBusiness}
-              onSelectBusiness={setActiveBusiness}
-            />
-
-            <MenuSection
-              activeBusiness={activeBusiness}
-            />
+            <Hero onExploreMenu={handleExploreMenu} />
+            <MenuSection />
           </>
         ) : (
-          <AdminDashboard
-            activeBusiness={activeBusiness}
-          />
+          <AdminDashboard />
         )}
       </main>
 
       {/* Footer */}
-      <Footer activeBusiness={activeBusiness} />
+      <Footer />
+
+      {/* Floating Bottom Cart Bar for Mobile Phones (only when no modal is active) */}
+      {totalItemsCount > 0 &&
+        viewMode === "menu" &&
+        !isCartOpen &&
+        !isCheckoutOpen &&
+        !activeTrackerOrder && (
+          <div className="sm:hidden fixed bottom-4 left-4 right-4 z-40">
+            <button
+              onClick={() => setIsCartOpen(true)}
+              className="w-full bg-gradient-to-r from-orange-600 via-amber-500 to-red-600 text-white font-black py-3.5 px-5 rounded-2xl shadow-2xl shadow-orange-600/40 flex items-center justify-between transition active:scale-95 border border-orange-300/40 min-h-[48px]"
+            >
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 bg-white text-orange-600 rounded-full font-black text-xs flex items-center justify-center shadow">
+                  {totalItemsCount}
+                </div>
+                <span className="text-xs uppercase tracking-wide flex items-center gap-1.5 font-extrabold">
+                  <ShoppingBag className="w-4 h-4" />
+                  <span>Ver Mi Pedido</span>
+                </span>
+              </div>
+              <span className="text-sm font-black tracking-tight">
+                {formatPrice(subtotalUsd)} →
+              </span>
+            </button>
+          </div>
+        )}
 
       {/* Global Modals & Drawers */}
-      <CartDrawer
-        activeBusiness={activeBusiness}
-        onProceedToCheckout={() => setIsCheckoutOpen(true)}
-      />
+      <CartDrawer onProceedToCheckout={() => setIsCheckoutOpen(true)} />
 
       <CheckoutModal
-        activeBusiness={activeBusiness}
         isOpen={isCheckoutOpen}
         onClose={() => setIsCheckoutOpen(false)}
         onOrderSuccess={handleOrderSuccess}
@@ -148,19 +119,20 @@ function MainApp() {
         order={activeTrackerOrder}
         onClose={() => setActiveTrackerOrder(null)}
       />
-
     </div>
   );
 }
 
 export default function App() {
   return (
-    <AuthProvider>
-      <CurrencyProvider>
-        <CartProvider>
-          <MainApp />
-        </CartProvider>
-      </CurrencyProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <CurrencyProvider>
+          <CartProvider>
+            <MainApp />
+          </CartProvider>
+        </CurrencyProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { MapPin, Navigation, Search, CheckCircle2 } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
 
 // Fix standard Leaflet icon paths
 delete L.Icon.Default.prototype._getIconUrl;
@@ -11,7 +12,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
-// Custom glowing Fast Food Delivery Pin Marker
+// Custom Delivery Pin Marker
 const deliveryPinIcon = new L.Icon({
   iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
   iconSize: [38, 38],
@@ -19,7 +20,6 @@ const deliveryPinIcon = new L.Icon({
   popupAnchor: [0, -38]
 });
 
-// Helper component to center map smoothly
 function ChangeView({ center }) {
   const map = useMap();
   useEffect(() => {
@@ -30,7 +30,6 @@ function ChangeView({ center }) {
   return null;
 }
 
-// Marker click event handler
 function LocationMarker({ position, setPosition, onAddressFound }) {
   useMapEvents({
     click(e) {
@@ -43,7 +42,6 @@ function LocationMarker({ position, setPosition, onAddressFound }) {
   return position ? <Marker position={position} icon={deliveryPinIcon} /> : null;
 }
 
-// Simple reverse geocoding via Nominatim API
 async function reverseGeocode(lat, lng, callback) {
   try {
     const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`);
@@ -57,13 +55,13 @@ async function reverseGeocode(lat, lng, callback) {
 }
 
 export default function GoogleMapPicker({ initialLat = 4.6097, initialLng = -74.0817, initialAddress = '', onSaveLocation }) {
+  const { isDark } = useTheme();
   const [position, setPosition] = useState([initialLat, initialLng]);
   const [addressText, setAddressText] = useState(initialAddress);
   const [details, setDetails] = useState('');
   const [searching, setSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Initial geocode if empty
   useEffect(() => {
     if (!initialAddress) {
       reverseGeocode(initialLat, initialLng, setAddressText);
@@ -134,13 +132,15 @@ export default function GoogleMapPicker({ initialLat = 4.6097, initialLng = -74.
             placeholder="Buscar calle, avenida o barrio en Google Maps..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-900/90 border border-slate-700/70 rounded-xl px-4 py-2.5 pl-10 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-orange-500"
+            className={`w-full border rounded-xl px-4 py-2.5 pl-10 text-xs sm:text-sm focus:outline-none focus:border-orange-500 ${
+              isDark ? 'bg-zinc-900 border-zinc-800 text-white placeholder-zinc-500' : 'bg-white border-zinc-300 text-zinc-900 placeholder-zinc-400'
+            }`}
           />
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
+          <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-3.5" />
           <button
             type="submit"
             disabled={searching}
-            className="absolute right-2 top-2 bg-orange-600 hover:bg-orange-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition"
+            className="absolute right-2 top-2 bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition"
           >
             {searching ? 'Buscando...' : 'Buscar'}
           </button>
@@ -149,15 +149,17 @@ export default function GoogleMapPicker({ initialLat = 4.6097, initialLng = -74.
         <button
           type="button"
           onClick={handleGetCurrentLocation}
-          className="flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-600/60 text-orange-400 hover:text-orange-300 text-xs font-semibold px-4 py-2.5 rounded-xl transition"
+          className={`flex items-center justify-center gap-2 border text-xs font-bold px-4 py-2.5 rounded-xl transition flex-shrink-0 ${
+            isDark ? 'bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-orange-400' : 'bg-zinc-100 hover:bg-zinc-200 border-zinc-300 text-orange-600'
+          }`}
         >
-          <Navigation className="w-4 h-4 animate-pulse" />
-          <span>Mi Ubicación GPS</span>
+          <Navigation className="w-4 h-4 animate-pulse text-orange-500" />
+          <span>Mi GPS</span>
         </button>
       </div>
 
       {/* Map Container */}
-      <div className="h-64 sm:h-72 w-full rounded-2xl overflow-hidden border border-slate-700/60 relative shadow-inner">
+      <div className="h-56 sm:h-72 w-full rounded-2xl overflow-hidden border relative shadow-inner border-zinc-700/60">
         <MapContainer
           center={position}
           zoom={15}
@@ -176,35 +178,41 @@ export default function GoogleMapPicker({ initialLat = 4.6097, initialLng = -74.
           />
         </MapContainer>
 
-        <div className="absolute bottom-2 left-2 right-2 bg-slate-950/90 backdrop-blur-md px-3 py-2 rounded-xl border border-slate-800 text-xs text-slate-300 flex items-center justify-between z-[1000]">
+        <div className={`absolute bottom-2 left-2 right-2 backdrop-blur-md px-3 py-2 rounded-xl border text-xs flex items-center justify-between z-[1000] ${
+          isDark ? 'bg-black/90 border-zinc-800 text-zinc-200' : 'bg-white/95 border-zinc-200 text-zinc-900 shadow-md'
+        }`}>
           <div className="flex items-center gap-2 truncate">
             <MapPin className="w-4 h-4 text-orange-500 flex-shrink-0" />
-            <span className="truncate font-medium text-white">{addressText || 'Haga clic en el mapa para marcar su casa'}</span>
+            <span className="truncate font-bold">{addressText || 'Toca el mapa para marcar tu casa'}</span>
           </div>
-          <span className="text-[10px] text-slate-400 flex-shrink-0 bg-slate-800 px-2 py-0.5 rounded">GPS Activo</span>
+          <span className="text-[10px] font-bold flex-shrink-0 bg-orange-500/20 text-orange-500 px-2 py-0.5 rounded">GPS Activo</span>
         </div>
       </div>
 
       {/* Manual Address details */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs text-slate-400 mb-1 font-medium">Dirección Exacta Confirmada</label>
+          <label className={`block text-xs mb-1 font-bold ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>Dirección Confirmada</label>
           <input
             type="text"
             value={addressText}
             onChange={(e) => setAddressText(e.target.value)}
             placeholder="Ej. Calle 10 #15-20"
-            className="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-orange-500"
+            className={`w-full border rounded-xl px-3 py-2 text-xs sm:text-sm focus:outline-none focus:border-orange-500 ${
+              isDark ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-zinc-300 text-zinc-900'
+            }`}
           />
         </div>
         <div>
-          <label className="block text-xs text-slate-400 mb-1 font-medium">Apto / Casa / Casa de Color / Ref</label>
+          <label className={`block text-xs mb-1 font-bold ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>Apto / Casa / Ref</label>
           <input
             type="text"
             value={details}
             onChange={(e) => setDetails(e.target.value)}
-            placeholder="Ej. Apto 302, Timbre negro frente a la farmacia"
-            className="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-orange-500"
+            placeholder="Ej. Apto 302, Timbre negro"
+            className={`w-full border rounded-xl px-3 py-2 text-xs sm:text-sm focus:outline-none focus:border-orange-500 ${
+              isDark ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-zinc-300 text-zinc-900'
+            }`}
           />
         </div>
       </div>
@@ -212,7 +220,7 @@ export default function GoogleMapPicker({ initialLat = 4.6097, initialLng = -74.
       <button
         type="button"
         onClick={handleSave}
-        className="w-full bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-500 hover:to-amber-400 text-white font-bold py-2.5 px-4 rounded-xl shadow-lg shadow-orange-600/30 flex items-center justify-center gap-2 transition"
+        className="w-full bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-500 hover:to-amber-400 text-white font-black py-3 px-4 rounded-xl shadow-lg shadow-orange-600/30 flex items-center justify-center gap-2 transition active:scale-95 text-xs sm:text-sm"
       >
         <CheckCircle2 className="w-5 h-5" />
         <span>Confirmar Ubicación de Entrega</span>
