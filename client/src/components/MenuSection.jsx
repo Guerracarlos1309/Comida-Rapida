@@ -6,14 +6,13 @@ import { useTheme } from '../context/ThemeContext';
 import ItemModal from './ItemModal';
 import { BUSINESS } from '../App';
 
-export default function MenuSection() {
+export default function MenuSection({ onSelectItem }) {
   const { formatPrice } = useCurrency();
   const { isDark } = useTheme();
-  const [categories, setCategories] = useState(['Todos', 'Hamburguesas', 'Perros Calientes', 'Combos & Papas', 'Bebidas']);
+  const [categories, setCategories] = useState(['Todos', 'Perros Calientes', 'Bebidas']);
   const [activeCategory, setActiveCategory] = useState('Todos');
   const [menuItems, setMenuItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedItemForModal, setSelectedItemForModal] = useState(null);
 
   useEffect(() => {
     fetchMenu();
@@ -64,9 +63,7 @@ export default function MenuSection() {
                       : 'bg-zinc-100 border border-zinc-300 text-zinc-700 hover:text-zinc-900'
                 }`}
               >
-                {cat === 'Hamburguesas' && <span>🍔</span>}
                 {cat === 'Perros Calientes' && <span>🌭</span>}
-                {cat === 'Combos & Papas' && <span>🍟</span>}
                 {cat === 'Bebidas' && <span>🥤</span>}
                 <span>{cat}</span>
               </button>
@@ -134,7 +131,7 @@ export default function MenuSection() {
                 </div>
 
                 <button
-                  onClick={() => setSelectedItemForModal(item)}
+                  onClick={() => onSelectItem ? onSelectItem(item) : null}
                   className={`w-full font-black py-3 px-4 rounded-xl sm:rounded-2xl flex items-center justify-center gap-2 text-xs transition-all active:scale-95 ${
                     isDark 
                       ? 'bg-zinc-900 hover:bg-orange-600 hover:text-white border border-zinc-700 text-orange-400' 
@@ -149,13 +146,6 @@ export default function MenuSection() {
             </motion.div>
           ))}
         </div>
-      )}
-
-      {selectedItemForModal && (
-        <ItemModal
-          item={selectedItemForModal}
-          onClose={() => setSelectedItemForModal(null)}
-        />
       )}
 
     </section>

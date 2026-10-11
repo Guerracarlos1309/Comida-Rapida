@@ -299,9 +299,14 @@ export default function AdminDashboard() {
                           <span>{it.quantity}x {it.name}</span>
                           <span className="text-amber-500">${(it.price_usd * it.quantity).toFixed(2)}</span>
                         </div>
-                        {it.selectedOptions && (
+                        {it.selectedOptions && Object.keys(it.selectedOptions).length > 0 && (
                           <div className={`text-[10px] italic mt-0.5 ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>
                             {Object.entries(it.selectedOptions).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join(' | ')}
+                          </div>
+                        )}
+                        {it.instructions && (
+                          <div className="text-[10px] text-amber-400 font-medium italic mt-0.5">
+                            📝 Nota: "{it.instructions}"
                           </div>
                         )}
                       </div>

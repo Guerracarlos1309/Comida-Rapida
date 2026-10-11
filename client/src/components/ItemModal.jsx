@@ -19,6 +19,7 @@ export default function ItemModal({ item, onClose }) {
   }, []);
 
   const [quantity, setQuantity] = useState(1);
+  const [instructions, setInstructions] = useState('');
   const [selectedOptions, setSelectedOptions] = useState(() => {
     const initial = {};
     if (item?.options) {
@@ -59,13 +60,13 @@ export default function ItemModal({ item, onClose }) {
   };
 
   const handleAddToCart = () => {
-    addToCart(item, quantity, selectedOptions, extraPriceUsd);
+    addToCart(item, quantity, selectedOptions, extraPriceUsd, instructions);
     onClose();
   };
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md overflow-hidden">
+      <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md overflow-hidden">
         {/* Backdrop click */}
         <div className="absolute inset-0" onClick={onClose} />
 
@@ -154,7 +155,7 @@ export default function ItemModal({ item, onClose }) {
                 )}
 
                 {opt.type === 'multi' && (
-                  <div className="flex flex-wrap gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     {opt.choices.map((choice, cIdx) => {
                       const isChecked = (selectedOptions[opt.name] || []).includes(choice);
                       return (
@@ -162,16 +163,27 @@ export default function ItemModal({ item, onClose }) {
                           key={cIdx}
                           type="button"
                           onClick={() => handleToggleMulti(opt.name, choice)}
-                          className={`px-3 py-2 rounded-xl border text-xs font-bold transition flex items-center gap-1.5 min-h-[40px] ${
+                          className={`p-3 rounded-xl border text-xs font-bold transition flex items-center justify-between min-h-[44px] ${
                             isChecked
                               ? 'bg-amber-500/20 border-amber-500 text-amber-500'
                               : isDark 
                                 ? 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white' 
-                                : 'bg-zinc-50 border-zinc-200 text-zinc-600 hover:text-black'
+                                : 'bg-zinc-50 border-zinc-200 text-zinc-500 hover:text-black line-through opacity-75'
                           }`}
                         >
-                          <Check className={`w-3.5 h-3.5 ${isChecked ? 'opacity-100' : 'opacity-0'}`} />
-                          <span>{choice}</span>
+                          <div className="flex items-center gap-2">
+                            <div className={`w-4 h-4 rounded flex items-center justify-center border transition ${
+                              isChecked 
+                                ? 'bg-amber-500 border-amber-500 text-black' 
+                                : isDark ? 'border-zinc-700 bg-zinc-950' : 'border-zinc-400 bg-white'
+                            }`}>
+                              {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+                            </div>
+                            <span>{choice}</span>
+                          </div>
+                          <span className="text-[10px] font-semibold opacity-80">
+                            {isChecked ? 'Incluido' : 'Sin'}
+                          </span>
                         </button>
                       );
                     })}
@@ -182,6 +194,7 @@ export default function ItemModal({ item, onClose }) {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {opt.choices.map((ch, cIdx) => {
                       const isChecked = (selectedOptions[opt.name] || []).includes(ch.label);
+                      const hasPrice = Number(ch.price_usd || 0) > 0;
                       return (
                         <button
                           key={cIdx}
@@ -195,8 +208,23 @@ export default function ItemModal({ item, onClose }) {
                                 : 'bg-zinc-50 border-zinc-200 text-zinc-700 hover:border-zinc-300'
                           }`}
                         >
-                          <span>{ch.label}</span>
-                          <span className="text-amber-500 font-black">+{formatPrice(ch.price_usd)}</span>
+                          <div className="flex items-center gap-2">
+                            <div className={`w-4 h-4 rounded flex items-center justify-center border transition ${
+                              isChecked 
+                                ? 'bg-orange-500 border-orange-500 text-white' 
+                                : isDark ? 'border-zinc-700 bg-zinc-950' : 'border-zinc-400 bg-white'
+                            }`}>
+                              {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+                            </div>
+                            <span>{ch.label}</span>
+                          </div>
+                          {hasPrice ? (
+                            <span className="text-amber-500 font-black">+{formatPrice(ch.price_usd)}</span>
+                          ) : (
+                            <span className="text-[10px] font-semibold opacity-70">
+                              {isChecked ? 'Agregado' : 'Opcional'}
+                            </span>
+                          )}
                         </button>
                       );
                     })}
@@ -205,6 +233,27 @@ export default function ItemModal({ item, onClose }) {
 
               </div>
             ))}
+
+            {/* Special Instructions / Indicaciones especiales */}
+            <div className="space-y-2 pt-2 border-t border-zinc-800/40">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-black uppercase tracking-wider text-orange-500">
+                  Nota o instrucción especial
+                </label>
+                <span className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>Opcional</span>
+              </div>
+              <textarea
+                value={instructions}
+                onChange={(e) => setInstructions(e.target.value)}
+                placeholder="Ej. Sin cebolla, con extra salsa tártara, carne bien dorada..."
+                rows={2}
+                className={`w-full p-3 rounded-xl border text-xs focus:outline-none focus:border-orange-500 resize-none ${
+                  isDark
+                    ? 'bg-zinc-900 border-zinc-800 text-white placeholder-zinc-500'
+                    : 'bg-zinc-50 border-zinc-300 text-zinc-900 placeholder-zinc-400'
+                }`}
+              />
+            </div>
           </div>
 
           {/* Footer */}

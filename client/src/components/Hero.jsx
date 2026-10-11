@@ -172,8 +172,8 @@ export default function Hero({ onExploreMenu }) {
               >
                 <div className="relative h-72 sm:h-80 w-full rounded-2xl overflow-hidden group">
                   <img
-                    src="/images/burger_hero.png"
-                    alt="Hamburguesa Gourmet y Perro Caliente"
+                    src="/images/hotdog_hero.png"
+                    alt="Perros Calientes Especiales"
                     className="w-full h-full object-cover group-hover:scale-105 transition duration-700"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />

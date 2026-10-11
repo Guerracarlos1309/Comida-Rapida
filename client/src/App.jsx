@@ -10,6 +10,7 @@ import Hero from "./components/Hero";
 import MenuSection from "./components/MenuSection";
 import CartDrawer from "./components/CartDrawer";
 import CheckoutModal from "./components/CheckoutModal";
+import ItemModal from "./components/ItemModal";
 import AuthModal from "./components/AuthModal";
 import OrderTracker from "./components/OrderTracker";
 import AdminDashboard from "./components/AdminDashboard";
@@ -22,8 +23,8 @@ export const BUSINESS = {
   slug: "tavos-hot",
   tagline: "Los mejores Perros calientes del municipio Andrés Bello",
   description: "Especialistas en Perros calientes cargados con todo.",
-  logo_url: "/images/burger_hero.png",
-  banner_url: "/images/burger_hero.png",
+  logo_url: "/images/hotdog_hero.png",
+  banner_url: "/images/hotdog_hero.png",
   phone: "+58 424 784 2726",
   address: "Calle 100 #15-24, Zona Gourmet",
   rating: 4.9,
@@ -38,6 +39,7 @@ function MainApp() {
   const [viewMode, setViewMode] = useState("menu"); // 'menu' or 'kitchen'
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [activeTrackerOrder, setActiveTrackerOrder] = useState(null);
+  const [selectedItemForModal, setSelectedItemForModal] = useState(null);
 
   const handleExploreMenu = () => {
     setViewMode("menu");
@@ -67,7 +69,7 @@ function MainApp() {
         {viewMode === "menu" ? (
           <>
             <Hero onExploreMenu={handleExploreMenu} />
-            <MenuSection />
+            <MenuSection onSelectItem={(item) => setSelectedItemForModal(item)} />
           </>
         ) : (
           <AdminDashboard />
@@ -82,7 +84,8 @@ function MainApp() {
         viewMode === "menu" &&
         !isCartOpen &&
         !isCheckoutOpen &&
-        !activeTrackerOrder && (
+        !activeTrackerOrder &&
+        !selectedItemForModal && (
           <div className="sm:hidden fixed bottom-4 left-4 right-4 z-40">
             <button
               onClick={() => setIsCartOpen(true)}
@@ -105,6 +108,11 @@ function MainApp() {
         )}
 
       {/* Global Modals & Drawers */}
+      <ItemModal
+        item={selectedItemForModal}
+        onClose={() => setSelectedItemForModal(null)}
+      />
+
       <CartDrawer onProceedToCheckout={() => setIsCheckoutOpen(true)} />
 
       <CheckoutModal

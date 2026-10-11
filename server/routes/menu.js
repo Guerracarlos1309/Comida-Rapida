@@ -9,7 +9,7 @@ router.get('/', (req, res) => {
     let items = MENU_ITEMS;
 
     if (business_slug) {
-      items = items.filter(item => item.business_slug === business_slug || item.business_slug === 'smash-dog');
+      items = items.filter(item => item.business_slug === business_slug || item.business_slug === 'tavos-hot');
     }
 
     if (category && category !== 'Todos') {

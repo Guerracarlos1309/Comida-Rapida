@@ -14,9 +14,11 @@ export const CartProvider = ({ children }) => {
     localStorage.setItem('fastfood_cart', JSON.stringify(cart));
   }, [cart]);
 
-  const addToCart = (item, quantity = 1, selectedOptions = {}, extraPriceUsd = 0) => {
+  const addToCart = (item, quantity = 1, selectedOptions = {}, extraPriceUsd = 0, instructions = '') => {
     const itemUnitPrice = Number(item.price_usd) + Number(extraPriceUsd);
-    const cartItemId = `${item.id}-${JSON.stringify(selectedOptions)}`;
+    const trimmedNotes = (instructions || '').trim();
+    // Unique key taking into account item id, options and custom notes
+    const cartItemId = `${item.id}-${JSON.stringify(selectedOptions)}-${trimmedNotes}`;
 
     setCart(prev => {
       const existingIndex = prev.findIndex(i => i.cartItemId === cartItemId);
@@ -30,7 +32,8 @@ export const CartProvider = ({ children }) => {
         cartItemId,
         price_usd: itemUnitPrice,
         quantity,
-        selectedOptions
+        selectedOptions,
+        instructions: trimmedNotes
       }];
     });
 

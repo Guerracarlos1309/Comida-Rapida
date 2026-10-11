@@ -30,7 +30,7 @@ export default function CartDrawer({ onProceedToCheckout }) {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 overflow-hidden">
+      <div className="fixed inset-0 z-[100] overflow-hidden">
         
         {/* Backdrop */}
         <motion.div
@@ -89,7 +89,7 @@ export default function CartDrawer({ onProceedToCheckout }) {
                   </div>
                   <h4 className={`text-base font-black ${isDark ? 'text-white' : 'text-zinc-900'}`}>Tu carrito está vacío</h4>
                   <p className={`text-xs max-w-xs mx-auto ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>
-                    Selecciona una hamburguesa o perro caliente del menú para continuar.
+                    Selecciona un delicioso perro caliente del menú para continuar.
                   </p>
                 </div>
               ) : (
@@ -120,11 +120,11 @@ export default function CartDrawer({ onProceedToCheckout }) {
                     </div>
 
                     {/* Selections summary */}
-                    {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
+                    {((item.selectedOptions && Object.keys(item.selectedOptions).length > 0) || item.instructions) && (
                       <div className={`text-[11px] p-2 rounded-lg space-y-0.5 border ${
                         isDark ? 'bg-black/60 text-zinc-300 border-zinc-800' : 'bg-white text-zinc-700 border-zinc-200'
                       }`}>
-                        {Object.entries(item.selectedOptions).map(([key, val]) => {
+                        {item.selectedOptions && Object.entries(item.selectedOptions).map(([key, val]) => {
                           if (Array.isArray(val) && val.length > 0) return (
                             <div key={key} className="truncate"><strong className="text-orange-500">{key}:</strong> {val.join(', ')}</div>
                           );
@@ -133,6 +133,11 @@ export default function CartDrawer({ onProceedToCheckout }) {
                           );
                           return null;
                         })}
+                        {item.instructions && (
+                          <div className="text-amber-400 font-medium italic mt-1 pt-1 border-t border-zinc-800/40">
+                            📝 <strong>Nota:</strong> {item.instructions}
+                          </div>
+                        )}
                       </div>
                     )}
 

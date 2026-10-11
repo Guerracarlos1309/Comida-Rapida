@@ -22,7 +22,7 @@ export default function Footer() {
               <span className={`font-black text-lg ${isDark ? 'text-white' : 'text-zinc-900'}`}>FAST FOOD ONLINE</span>
             </div>
             <p className={`text-xs leading-relaxed ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>
-              Sistema de Pedidos Online y Delivery Directo para Perros Calientes y Hamburguesas Gourmet.
+              Sistema de Pedidos Online y Delivery Directo para Perros Calientes Especiales.
             </p>
           </div>
 
@@ -94,7 +94,7 @@ export default function Footer() {
         }`}>
           <span>&copy; 2026 Fast Food Delivery System. Todos los derechos reservados.</span>
           <span className="flex items-center gap-1">
-            Diseñado con <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500" /> para Perros Calientes & Hamburguesas
+            Diseñado con <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500" /> para Perros Calientes
           </span>
         </div>
 

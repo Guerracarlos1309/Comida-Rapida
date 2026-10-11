@@ -65,7 +65,7 @@ export default function OrderTracker({ order, onClose }) {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/85 backdrop-blur-md overflow-hidden">
+      <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/85 backdrop-blur-md overflow-hidden">
         {/* Backdrop click */}
         <div className="absolute inset-0" onClick={onClose} />
 
@@ -180,12 +180,31 @@ export default function OrderTracker({ order, onClose }) {
               </div>
 
               {/* Items */}
-              <div className="space-y-1 pt-1">
+              <div className="space-y-2 pt-1">
                 <span className={`font-bold block mb-1 ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>Productos:</span>
                 {order.items && order.items.map((it, idx) => (
-                  <div key={idx} className={`flex justify-between ${isDark ? 'text-zinc-300' : 'text-zinc-700'}`}>
-                    <span className="truncate max-w-[150px]">{it.quantity}x {it.name}</span>
-                    <span className="font-mono opacity-80">${(it.price_usd * it.quantity).toFixed(2)}</span>
+                  <div key={idx} className={`p-1.5 rounded-lg border text-[11px] ${
+                    isDark ? 'bg-zinc-950/70 border-zinc-800' : 'bg-white border-zinc-200'
+                  }`}>
+                    <div className="flex justify-between items-center font-bold">
+                      <span className="truncate max-w-[180px]">{it.quantity}x {it.name}</span>
+                      <span className="font-mono text-amber-500">${(it.price_usd * it.quantity).toFixed(2)}</span>
+                    </div>
+                    {it.selectedOptions && Object.keys(it.selectedOptions).length > 0 && (
+                      <div className="text-[10px] opacity-80 mt-0.5 space-y-0.5">
+                        {Object.entries(it.selectedOptions).map(([key, val]) => (
+                          <div key={key}>
+                            <span className="text-orange-500 font-semibold">{key}: </span>
+                            {Array.isArray(val) ? val.join(', ') : val}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {it.instructions && (
+                      <div className="text-[10px] text-amber-400 italic mt-0.5">
+                        Nota: "{it.instructions}"
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

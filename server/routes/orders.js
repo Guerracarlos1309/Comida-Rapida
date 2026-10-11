@@ -6,14 +6,18 @@ const { query, EXCHANGE_RATES } = require('../db');
 function generateWhatsAppMessage(order, businessPhone = '573001234567') {
   const itemsText = order.items.map((item, idx) => {
     let optsText = '';
+    const detailsArr = [];
     if (item.selectedOptions && Object.keys(item.selectedOptions).length > 0) {
-      const details = Object.entries(item.selectedOptions)
-        .map(([key, val]) => {
-          if (Array.isArray(val)) return `${key}: ${val.join(', ')}`;
-          return `${key}: ${val}`;
-        })
-        .join(' | ');
-      optsText = `\n     ↳ _${details}_`;
+      Object.entries(item.selectedOptions).forEach(([key, val]) => {
+        if (Array.isArray(val)) detailsArr.push(`${key}: ${val.join(', ')}`);
+        else detailsArr.push(`${key}: ${val}`);
+      });
+    }
+    if (item.instructions) {
+      detailsArr.push(`Nota: "${item.instructions}"`);
+    }
+    if (detailsArr.length > 0) {
+      optsText = `\n     ↳ _${detailsArr.join(' | ')}_`;
     }
     return `  *${item.quantity}x ${item.name}* - $${(item.price_usd * item.quantity).toFixed(2)}${optsText}`;
   }).join('\n');
