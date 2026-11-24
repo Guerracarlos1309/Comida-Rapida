@@ -5,34 +5,49 @@ import { useCart } from '../context/CartContext';
 import { useCurrency } from '../context/CurrencyContext';
 import { useTheme } from '../context/ThemeContext';
 
-export default function ItemModal({ item, onClose }) {
-  const { addToCart } = useCart();
+function buildInitialOptions(item) {
+  const initial = {};
+  if (item?.selectedOptions && Object.keys(item.selectedOptions).length > 0) {
+    Object.entries(item.selectedOptions).forEach(([key, val]) => {
+      initial[key] = Array.isArray(val) ? [...val] : val;
+    });
+    return initial;
+  }
+  if (item?.options) {
+    item.options.forEach(opt => {
+      if (opt.type === 'single') initial[opt.name] = opt.choices[0];
+      else if (opt.type === 'multi') initial[opt.name] = [...opt.choices];
+      else if (opt.type === 'checkboxes') initial[opt.name] = [];
+    });
+  }
+  return initial;
+}
+
+export default function ItemModal({ item, mode = 'add', editingCartItemId = null, onClose }) {
+  const { addToCart, updateCartItem } = useCart();
   const { formatPrice, getEquivalentText } = useCurrency();
   const { isDark } = useTheme();
 
-  // Lock body scroll when modal is open
+  const [quantity, setQuantity] = useState(1);
+  const [instructions, setInstructions] = useState('');
+  const [selectedOptions, setSelectedOptions] = useState({});
+
+  // Sync form state and body scroll lock whenever item or mode changes
   useEffect(() => {
+    if (!item) return;
+    setQuantity(mode === 'edit' ? (item.quantity || 1) : 1);
+    setInstructions(item.instructions || '');
+    setSelectedOptions(buildInitialOptions(item));
+
     document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = '';
     };
-  }, []);
-
-  const [quantity, setQuantity] = useState(1);
-  const [instructions, setInstructions] = useState('');
-  const [selectedOptions, setSelectedOptions] = useState(() => {
-    const initial = {};
-    if (item?.options) {
-      item.options.forEach(opt => {
-        if (opt.type === 'single') initial[opt.name] = opt.choices[0];
-        else if (opt.type === 'multi') initial[opt.name] = [...opt.choices];
-        else if (opt.type === 'checkboxes') initial[opt.name] = [];
-      });
-    }
-    return initial;
-  });
+  }, [item, mode, editingCartItemId]);
 
   if (!item) return null;
+
+  const basePriceUsd = Number(item.base_price_usd ?? item.price_usd);
 
   let extraPriceUsd = 0;
   if (item.options) {
@@ -47,7 +62,8 @@ export default function ItemModal({ item, onClose }) {
     });
   }
 
-  const itemTotalUsd = (Number(item.price_usd) + extraPriceUsd) * quantity;
+  const unitPriceUsd = basePriceUsd + extraPriceUsd;
+  const itemTotalUsd = unitPriceUsd * quantity;
 
   const handleToggleMulti = (optName, choiceLabel) => {
     setSelectedOptions(prev => {
@@ -59,8 +75,12 @@ export default function ItemModal({ item, onClose }) {
     });
   };
 
-  const handleAddToCart = () => {
-    addToCart(item, quantity, selectedOptions, extraPriceUsd, instructions);
+  const handleConfirm = () => {
+    if (mode === 'edit' && editingCartItemId) {
+      updateCartItem(editingCartItemId, item, quantity, selectedOptions, extraPriceUsd, instructions);
+    } else {
+      addToCart(item, quantity, selectedOptions, extraPriceUsd, instructions);
+    }
     onClose();
   };
 
@@ -114,8 +134,8 @@ export default function ItemModal({ item, onClose }) {
             }`}>
               <span className={`text-xs font-bold ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>Precio Unitario:</span>
               <div className="text-right">
-                <span className="text-base sm:text-lg font-black text-amber-500">{formatPrice(Number(item.price_usd) + extraPriceUsd)}</span>
-                <span className="block text-[10px] text-zinc-500 hidden sm:block">{getEquivalentText(Number(item.price_usd) + extraPriceUsd)}</span>
+                <span className="text-base sm:text-lg font-black text-amber-500">{formatPrice(unitPriceUsd)}</span>
+                <span className="block text-[10px] text-zinc-500 hidden sm:block">{getEquivalentText(unitPriceUsd)}</span>
               </div>
             </div>
 
@@ -285,11 +305,17 @@ export default function ItemModal({ item, onClose }) {
             </div>
 
             <button
-              onClick={handleAddToCart}
+              onClick={handleConfirm}
               className="flex-1 bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-500 hover:to-amber-400 text-white font-black py-3 px-4 rounded-2xl shadow-lg shadow-orange-600/30 flex items-center justify-center gap-2 text-xs sm:text-sm transition active:scale-95 min-h-[44px]"
             >
               <ShoppingBag className="w-4 h-4" />
-              <span>Agregar ({formatPrice(itemTotalUsd)})</span>
+              <span>
+                {mode === 'edit'
+                  ? `Guardar cambios (${formatPrice(itemTotalUsd)})`
+                  : mode === 'duplicate'
+                    ? `Agregar otro igual/modificado (${formatPrice(itemTotalUsd)})`
+                    : `Agregar (${formatPrice(itemTotalUsd)})`}
+              </span>
             </button>
 
           </div>

@@ -1,85 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ChefHat, Clock, Bike, CheckCircle2, MapPin, Phone, DollarSign, Bell, Volume2, VolumeX, ExternalLink, RefreshCw, Search } from 'lucide-react';
-import { io } from 'socket.io-client';
+import { ChefHat, Clock, Bike, CheckCircle2, MapPin, BellRing, Volume2, VolumeX, ExternalLink, RefreshCw, Search, XCircle } from 'lucide-react';
 import { useCurrency } from '../context/CurrencyContext';
 import { useTheme } from '../context/ThemeContext';
+import { useOrders } from '../context/OrdersContext';
+import { BUSINESS } from '../App';
 
 export default function AdminDashboard() {
-  const { formatPrice, EXCHANGE_RATES } = useCurrency();
+  const { EXCHANGE_RATES } = useCurrency();
   const { isDark } = useTheme();
+  const {
+    adminOrders: orders,
+    adminLoading: loading,
+    fetchAdminOrders: fetchOrders,
+    updateOrderStatus,
+    soundEnabled,
+    setSoundEnabled,
+    clearAlerts,
+    browserNotifyPermission,
+    requestBrowserNotificationPermission,
+  } = useOrders();
 
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [soundEnabled, setSoundEnabled] = useState(true);
   const [filterCurrency, setFilterCurrency] = useState('ALL');
+  const [filterStatus, setFilterStatus] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    fetchOrders();
-
-    const socket = io('/', { transports: ['websocket', 'polling'] });
-
-    socket.on('connect', () => {
-      console.log('⚡ Socket conectado en Cocina/Admin Dashboard');
-    });
-
-    socket.on('new_order', (newOrder) => {
-      setOrders(prev => [newOrder, ...prev]);
-
-      if (soundEnabled) {
-        try {
-          const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-          audio.play().catch(e => console.log('Audio auto-play error', e));
-        } catch(e){}
-      }
-    });
-
-    socket.on('order_status_updated', ({ id, status }) => {
-      setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
-    });
-
-    // Auto-update polling fallback every 5s
-    const interval = setInterval(() => {
-      fetch('/api/orders')
-        .then(res => res.json())
-        .then(data => {
-          if (Array.isArray(data)) setOrders(data);
-        })
-        .catch(() => {});
-    }, 5000);
-
-    return () => {
-      socket.disconnect();
-      clearInterval(interval);
-    };
-  }, []);
-
-  const fetchOrders = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/orders');
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setOrders(data);
-      }
-    } catch (e) {
-      console.error('Error cargando pedidos admin:', e);
-    } finally {
-      setLoading(false);
-    }
-  };
+    clearAlerts();
+  }, [orders.length]);
 
   const handleUpdateStatus = async (orderId, newStatus) => {
     try {
-      const res = await fetch(`/api/orders/${orderId}/status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus })
-      });
-      if (res.ok) {
-        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
-      }
+      await updateOrderStatus(orderId, newStatus);
     } catch (e) {
       console.error(e);
     }
@@ -88,15 +40,19 @@ export default function AdminDashboard() {
   // Filter orders
   const filteredOrders = orders.filter(order => {
     const matchesCurrency = filterCurrency === 'ALL' || order.currency === filterCurrency;
-    const matchesSearch = searchQuery === '' || 
-      order.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.order_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.customer_phone.includes(searchQuery);
-    return matchesCurrency && matchesSearch;
+    const matchesStatus = filterStatus === 'ALL' || order.status === filterStatus;
+    const q = searchQuery.toLowerCase();
+    const matchesSearch = q === '' || 
+      String(order.customer_name || '').toLowerCase().includes(q) ||
+      String(order.order_code || '').toLowerCase().includes(q) ||
+      String(order.customer_phone || '').includes(searchQuery);
+    return matchesCurrency && matchesStatus && matchesSearch;
   });
 
   // Calculate metrics
-  const totalRevenueUsd = orders.reduce((sum, o) => sum + Number(o.total_usd || 0), 0);
+  const totalRevenueUsd = orders
+    .filter(o => o.status !== 'CANCELADO')
+    .reduce((sum, o) => sum + Number(o.total_usd || 0), 0);
   const pendingCount = orders.filter(o => o.status === 'PENDIENTE').length;
   const prepCount = orders.filter(o => o.status === 'EN_PREPARACION').length;
 
@@ -119,13 +75,35 @@ export default function AdminDashboard() {
               </span>
             </h1>
             <p className={`text-xs ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>
-              Notificaciones en tiempo real para {activeBusiness?.name || 'Smash & Dog Club'}
+              Notificaciones automáticas en tiempo real para {BUSINESS?.name || 'Tavos Hot-Dogs'}
             </p>
           </div>
         </div>
 
         {/* Dashboard Controls */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          {browserNotifyPermission !== 'unsupported' && (
+            <button
+              onClick={requestBrowserNotificationPermission}
+              className={`px-3 py-2 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition ${
+                browserNotifyPermission === 'granted'
+                  ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-500'
+                  : browserNotifyPermission === 'denied'
+                    ? 'bg-red-500/10 border-red-500/30 text-red-400'
+                    : 'bg-amber-500/15 border-amber-500/40 text-amber-500 hover:bg-amber-500/25'
+              }`}
+            >
+              <BellRing className="w-4 h-4" />
+              <span>
+                {browserNotifyPermission === 'granted'
+                  ? 'Alertas PC ON'
+                  : browserNotifyPermission === 'denied'
+                    ? 'Alertas bloqueadas'
+                    : 'Activar Alertas PC'}
+              </span>
+            </button>
+          )}
+
           <button
             onClick={() => setSoundEnabled(!soundEnabled)}
             className={`px-3 py-2 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition ${
@@ -196,6 +174,26 @@ export default function AdminDashboard() {
         <div className={`flex items-center gap-2 border px-3 py-1.5 rounded-2xl ${
           isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-300 shadow-sm'
         }`}>
+          <span className={`text-xs font-bold ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>Estado:</span>
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className={`bg-transparent text-xs font-bold focus:outline-none cursor-pointer ${
+              isDark ? 'text-amber-400' : 'text-orange-600'
+            }`}
+          >
+            <option value="ALL" className={isDark ? 'bg-zinc-900 text-white' : 'bg-white text-zinc-900'}>Todos</option>
+            <option value="PENDIENTE" className={isDark ? 'bg-zinc-900 text-white' : 'bg-white text-zinc-900'}>Pendientes</option>
+            <option value="EN_PREPARACION" className={isDark ? 'bg-zinc-900 text-white' : 'bg-white text-zinc-900'}>En Cocina</option>
+            <option value="EN_CAMINO" className={isDark ? 'bg-zinc-900 text-white' : 'bg-white text-zinc-900'}>En Camino</option>
+            <option value="ENTREGADO" className={isDark ? 'bg-zinc-900 text-white' : 'bg-white text-zinc-900'}>Entregados</option>
+            <option value="CANCELADO" className={isDark ? 'bg-zinc-900 text-white' : 'bg-white text-zinc-900'}>Cancelados</option>
+          </select>
+        </div>
+
+        <div className={`flex items-center gap-2 border px-3 py-1.5 rounded-2xl ${
+          isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-300 shadow-sm'
+        }`}>
           <span className={`text-xs font-bold ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>Moneda:</span>
           <select
             value={filterCurrency}
@@ -254,9 +252,10 @@ export default function AdminDashboard() {
                       order.status === 'PENDIENTE' ? 'bg-orange-500/20 text-orange-500 border-orange-500/40 animate-pulse' :
                       order.status === 'EN_PREPARACION' ? 'bg-amber-500/20 text-amber-500 border-amber-500/40' :
                       order.status === 'EN_CAMINO' ? 'bg-blue-500/20 text-blue-500 border-blue-500/40' :
+                      order.status === 'CANCELADO' ? 'bg-red-500/20 text-red-500 border-red-500/40' :
                       'bg-emerald-500/20 text-emerald-500 border-emerald-500/40'
                     }`}>
-                      {order.status}
+                      {order.status === 'PENDIENTE' ? '🔔 NUEVO / PENDIENTE' : order.status}
                     </span>
                   </div>
 
@@ -333,13 +332,22 @@ export default function AdminDashboard() {
                 {/* Status Action Buttons */}
                 <div className={`pt-2 border-t flex items-center gap-2 ${isDark ? 'border-zinc-800' : 'border-zinc-200'}`}>
                   {order.status === 'PENDIENTE' && (
-                    <button
-                      onClick={() => handleUpdateStatus(order.id, 'EN_PREPARACION')}
-                      className="w-full bg-amber-500 hover:bg-amber-400 text-black font-black py-2.5 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition"
-                    >
-                      <ChefHat className="w-4 h-4" />
-                      <span>Pasar a Cocina</span>
-                    </button>
+                    <>
+                      <button
+                        onClick={() => handleUpdateStatus(order.id, 'EN_PREPARACION')}
+                        className="flex-1 bg-amber-500 hover:bg-amber-400 text-black font-black py-2.5 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition"
+                      >
+                        <ChefHat className="w-4 h-4" />
+                        <span>Pasar a Cocina</span>
+                      </button>
+                      <button
+                        onClick={() => handleUpdateStatus(order.id, 'CANCELADO')}
+                        title="Cancelar pedido"
+                        className="p-2.5 rounded-xl border border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500/20 transition active:scale-95"
+                      >
+                        <XCircle className="w-4 h-4" />
+                      </button>
+                    </>
                   )}
                   {order.status === 'EN_PREPARACION' && (
                     <button
@@ -362,6 +370,11 @@ export default function AdminDashboard() {
                   {order.status === 'ENTREGADO' && (
                     <span className="w-full text-center text-xs text-emerald-500 font-extrabold py-2 bg-emerald-500/10 rounded-xl border border-emerald-500/30">
                       ✓ Pedido Completado
+                    </span>
+                  )}
+                  {order.status === 'CANCELADO' && (
+                    <span className="w-full text-center text-xs text-red-500 font-extrabold py-2 bg-red-500/10 rounded-xl border border-red-500/30">
+                      ✕ Pedido Cancelado
                     </span>
                   )}
                 </div>

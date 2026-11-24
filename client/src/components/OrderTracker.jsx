@@ -1,56 +1,58 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
-import { CheckCircle2, Clock, ChefHat, Bike, PartyPopper, MessageSquare, MapPin, X, ExternalLink } from 'lucide-react';
-import { io } from 'socket.io-client';
+import { CheckCircle2, Clock, ChefHat, Bike, PartyPopper, MessageSquare, MapPin, X, ExternalLink, Copy, Edit3, RefreshCw, BellRing } from 'lucide-react';
 import { useCurrency } from '../context/CurrencyContext';
 import { useTheme } from '../context/ThemeContext';
+import { useOrders } from '../context/OrdersContext';
+import { useCart } from '../context/CartContext';
 
-export default function OrderTracker({ order, onClose }) {
+export default function OrderTracker({ order, onClose, onOrderSelect }) {
   const { EXCHANGE_RATES } = useCurrency();
   const { isDark } = useTheme();
+  const { myOrders, repeatOrderIdentical } = useOrders();
+  const { loadOrderIntoCart } = useCart();
 
-  const [currentStatus, setCurrentStatus] = useState(order?.status || 'PENDIENTE');
+  const [repeating, setRepeating] = useState(false);
+  const [repeatError, setRepeatError] = useState('');
+
+  // Keep status synced directly from global real-time OrdersContext
+  const liveOrder = myOrders.find(
+    (o) => String(o.id) === String(order?.id) || o.order_code === order?.order_code
+  ) || order;
+  const currentStatus = liveOrder?.status || 'PENDIENTE';
 
   useEffect(() => {
     if (!order) return;
-    setCurrentStatus(order.status || 'PENDIENTE');
-
     document.body.style.overflow = 'hidden';
     confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
 
-    // Connect to Socket.io for real-time status auto-update
-    const socket = io('/', { transports: ['websocket', 'polling'] });
-
-    socket.on('order_status_updated', ({ id, status, order: updatedOrder }) => {
-      if (String(id) === String(order.id) || (updatedOrder && updatedOrder.order_code === order.order_code)) {
-        setCurrentStatus(status);
-      }
-    });
-
-    // Auto-update polling fallback every 4s
-    const interval = setInterval(() => {
-      fetch('/api/orders')
-        .then(res => res.json())
-        .then(data => {
-          if (Array.isArray(data)) {
-            const match = data.find(o => String(o.id) === String(order.id) || o.order_code === order.order_code);
-            if (match && match.status) {
-              setCurrentStatus(match.status);
-            }
-          }
-        })
-        .catch(() => {});
-    }, 4000);
-
     return () => {
       document.body.style.overflow = '';
-      socket.disconnect();
-      clearInterval(interval);
     };
-  }, [order]);
+  }, [order?.order_code]);
 
   if (!order) return null;
+
+  const handleRepeatIdentical = async () => {
+    setRepeatError('');
+    setRepeating(true);
+    try {
+      const newOrder = await repeatOrderIdentical(liveOrder);
+      if (onOrderSelect) {
+        onOrderSelect(newOrder);
+      }
+    } catch (err) {
+      setRepeatError(err.message || 'No se pudo enviar el pedido repetido');
+    } finally {
+      setRepeating(false);
+    }
+  };
+
+  const handleDuplicateAndModify = () => {
+    loadOrderIntoCart(liveOrder.items || []);
+    onClose();
+  };
 
   const STATUS_STEPS = [
     { key: 'PENDIENTE', label: 'Recibido', icon: Clock },
@@ -61,7 +63,7 @@ export default function OrderTracker({ order, onClose }) {
 
   const currentStepIndex = STATUS_STEPS.findIndex(s => s.key === (currentStatus || 'PENDIENTE'));
   const activeIndex = currentStepIndex >= 0 ? currentStepIndex : 0;
-  const symbol = EXCHANGE_RATES[order.currency]?.symbol || '$';
+  const symbol = EXCHANGE_RATES[liveOrder.currency]?.symbol || '$';
 
   return (
     <AnimatePresence>
@@ -94,7 +96,7 @@ export default function OrderTracker({ order, onClose }) {
             <h3 className={`text-xl sm:text-2xl font-black ${isDark ? 'text-white' : 'text-zinc-900'}`}>¡Pedido Registrado!</h3>
             <div className="flex items-center justify-center gap-2 mt-1">
               <span className="text-xs text-orange-500 font-extrabold bg-orange-500/10 px-3 py-1 rounded-full border border-orange-500/30 inline-block">
-                Código: #{order.order_code}
+                Código: #{liveOrder.order_code}
               </span>
               <span className="text-[10px] bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 px-2 py-0.5 rounded-full font-black animate-pulse">
                 ⚡ EN VIVO
@@ -139,22 +141,69 @@ export default function OrderTracker({ order, onClose }) {
               </div>
             </div>
 
-            {/* WhatsApp Button */}
-            {order.whatsapp?.whatsapp_url && (
+            {/* Automatic Admin Notification Confirmation */}
+            <div className={`p-3.5 rounded-2xl border flex items-center gap-3 ${
+              isDark ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+            }`}>
+              <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-500 flex items-center justify-center flex-shrink-0">
+                <BellRing className="w-5 h-5" />
+              </div>
+              <div className="text-xs">
+                <strong className="block font-black">Administrador notificado automáticamente</strong>
+                <span className="opacity-85">Tu pedido ya llegó al panel de cocina en tiempo real.</span>
+              </div>
+            </div>
+
+            {/* Repeat / Clone Actions for multiple orders */}
+            <div className="space-y-2">
+              {repeatError && (
+                <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-500 text-xs font-bold">
+                  {repeatError}
+                </div>
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  disabled={repeating}
+                  onClick={handleRepeatIdentical}
+                  className="bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-500 hover:to-amber-400 text-white font-black py-3 px-4 rounded-2xl shadow-lg shadow-orange-600/25 flex items-center justify-center gap-2 text-xs transition active:scale-95 disabled:opacity-60 min-h-[44px]"
+                >
+                  {repeating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Copy className="w-4 h-4" />}
+                  <span>{repeating ? 'Enviando pedido...' : 'Pedir otro igual (1 clic)'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDuplicateAndModify}
+                  className={`font-black py-3 px-4 rounded-2xl border flex items-center justify-center gap-2 text-xs transition active:scale-95 min-h-[44px] ${
+                    isDark
+                      ? 'bg-zinc-900 border-amber-500/40 text-amber-400 hover:bg-zinc-800'
+                      : 'bg-amber-50 border-amber-300 text-amber-800 hover:bg-amber-100'
+                  }`}
+                >
+                  <Edit3 className="w-4 h-4" />
+                  <span>Duplicar y cambiar algo</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Optional WhatsApp Button */}
+            {liveOrder.whatsapp?.whatsapp_url && (
               <div>
                 <a 
-                  href={order.whatsapp.whatsapp_url} 
+                  href={liveOrder.whatsapp.whatsapp_url} 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="w-full bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white font-black py-3.5 px-6 rounded-2xl shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 text-xs sm:text-sm transition active:scale-95 min-h-[48px]"
+                  className={`w-full border font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 text-xs transition active:scale-95 ${
+                    isDark
+                      ? 'bg-zinc-900 border-zinc-800 text-emerald-400 hover:bg-zinc-800'
+                      : 'bg-zinc-50 border-zinc-200 text-emerald-700 hover:bg-zinc-100'
+                  }`}
                 >
-                  <MessageSquare className="w-5 h-5" />
-                  <span>Enviar Notificación por WhatsApp</span>
-                  <ExternalLink className="w-4 h-4 opacity-80" />
+                  <MessageSquare className="w-4 h-4" />
+                  <span>Escribir por WhatsApp (Opcional)</span>
+                  <ExternalLink className="w-3.5 h-3.5 opacity-80" />
                 </a>
-                <span className={`text-[10px] block text-center mt-1.5 ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>
-                  Envía el pedido organizado directo al negocio
-                </span>
               </div>
             )}
 
@@ -165,24 +214,24 @@ export default function OrderTracker({ order, onClose }) {
               <div className={`flex items-center justify-between border-b pb-2 ${isDark ? 'border-zinc-800' : 'border-zinc-200'}`}>
                 <span className={isDark ? 'text-zinc-400' : 'text-zinc-600'}>Cliente:</span>
                 <strong className={`text-right max-w-[200px] truncate ${isDark ? 'text-white' : 'text-zinc-900'}`}>
-                  {order.customer_name} ({order.customer_phone})
+                  {liveOrder.customer_name} ({liveOrder.customer_phone})
                 </strong>
               </div>
               <div className={`flex items-start justify-between border-b pb-2 ${isDark ? 'border-zinc-800' : 'border-zinc-200'}`}>
                 <span className={`flex items-center gap-1 flex-shrink-0 ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>
                   <MapPin className="w-3.5 h-3.5 text-orange-500" /> Dir:
                 </span>
-                <span className={`text-right max-w-[200px] break-words ${isDark ? 'text-white' : 'text-zinc-900'}`}>{order.delivery_address}</span>
+                <span className={`text-right max-w-[200px] break-words ${isDark ? 'text-white' : 'text-zinc-900'}`}>{liveOrder.delivery_address}</span>
               </div>
               <div className={`flex items-center justify-between border-b pb-2 ${isDark ? 'border-zinc-800' : 'border-zinc-200'}`}>
                 <span className={isDark ? 'text-zinc-400' : 'text-zinc-600'}>Pago:</span>
-                <strong className="text-amber-500">{order.currency} ({order.payment_method})</strong>
+                <strong className="text-amber-500">{liveOrder.currency} ({liveOrder.payment_method})</strong>
               </div>
 
               {/* Items */}
               <div className="space-y-2 pt-1">
                 <span className={`font-bold block mb-1 ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>Productos:</span>
-                {order.items && order.items.map((it, idx) => (
+                {liveOrder.items && liveOrder.items.map((it, idx) => (
                   <div key={idx} className={`p-1.5 rounded-lg border text-[11px] ${
                     isDark ? 'bg-zinc-950/70 border-zinc-800' : 'bg-white border-zinc-200'
                   }`}>
@@ -214,7 +263,7 @@ export default function OrderTracker({ order, onClose }) {
               }`}>
                 <span>TOTAL A PAGAR:</span>
                 <span className="text-amber-500 font-black">
-                  {symbol} {Number(order.total_in_currency || order.total_usd).toLocaleString()}
+                  {symbol} {Number(liveOrder.total_in_currency || liveOrder.total_usd).toLocaleString()}
                 </span>
               </div>
             </div>

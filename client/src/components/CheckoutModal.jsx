@@ -14,6 +14,7 @@ import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import { useCurrency, EXCHANGE_RATES } from "../context/CurrencyContext";
 import { useTheme } from "../context/ThemeContext";
+import { useOrders, getSavedCustomerInfo, saveCustomerInfo } from "../context/OrdersContext";
 import GoogleMapPicker from "./GoogleMapPicker";
 import { BUSINESS } from "../App";
 
@@ -22,6 +23,7 @@ export default function CheckoutModal({ isOpen, onClose, onOrderSuccess }) {
   const { user, setIsAuthModalOpen } = useAuth();
   const { currency, setCurrency, formatPrice } = useCurrency();
   const { isDark } = useTheme();
+  const { addUserOrder } = useOrders();
 
   // Lock body scroll when checkout modal is open
   useEffect(() => {
@@ -38,20 +40,33 @@ export default function CheckoutModal({ isOpen, onClose, onOrderSuccess }) {
   const deliveryFeeUsd = BUSINESS.delivery_fee_usd;
   const totalUsd = subtotalUsd + deliveryFeeUsd;
 
+  const savedCustomer = getSavedCustomerInfo();
+
   const [customerName, setCustomerName] = useState(
-    user ? `${user.first_name} ${user.last_name}` : "",
+    user ? `${user.first_name} ${user.last_name}` : savedCustomer?.customerName || "",
   );
-  const [customerPhone, setCustomerPhone] = useState(user?.phone || "");
-  const [deliveryAddress, setDeliveryAddress] = useState(user?.address || "");
-  const [deliveryLat, setDeliveryLat] = useState(user?.address_lat || 4.6097);
-  const [deliveryLng, setDeliveryLng] = useState(user?.address_lng || -74.0817);
+  const [customerPhone, setCustomerPhone] = useState(user?.phone || savedCustomer?.customerPhone || "");
+  const [deliveryAddress, setDeliveryAddress] = useState(user?.address || savedCustomer?.deliveryAddress || "");
+  const [deliveryLat, setDeliveryLat] = useState(user?.address_lat || savedCustomer?.deliveryLat || 4.6097);
+  const [deliveryLng, setDeliveryLng] = useState(user?.address_lng || savedCustomer?.deliveryLng || -74.0817);
   const [deliveryNotes, setDeliveryNotes] = useState(
-    user?.address_details || "",
+    user?.address_details || savedCustomer?.deliveryNotes || "",
   );
-  const [paymentMethod, setPaymentMethod] = useState("EFECTIVO");
+  const [paymentMethod, setPaymentMethod] = useState(savedCustomer?.paymentMethod || "EFECTIVO");
   const [isEditingMap, setIsEditingMap] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (user) {
+      setCustomerName((prev) => prev || `${user.first_name} ${user.last_name}`);
+      setCustomerPhone((prev) => prev || user.phone || "");
+      setDeliveryAddress((prev) => prev || user.address || "");
+      if (user.address_lat) setDeliveryLat(user.address_lat);
+      if (user.address_lng) setDeliveryLng(user.address_lng);
+      setDeliveryNotes((prev) => prev || user.address_details || "");
+    }
+  }, [user]);
 
   if (!isOpen) return null;
 
@@ -72,6 +87,10 @@ export default function CheckoutModal({ isOpen, onClose, onOrderSuccess }) {
       !deliveryAddress.trim()
     ) {
       setError("Complete los datos: Nombre, Teléfono y Dirección de entrega");
+      return;
+    }
+    if (!cart || cart.length === 0) {
+      setError("Tu carrito está vacío. Agrega al menos un producto.");
       return;
     }
     setLoading(true);
@@ -100,32 +119,24 @@ export default function CheckoutModal({ isOpen, onClose, onOrderSuccess }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error al procesar el pedido");
+
+      saveCustomerInfo({
+        customerName: customerName.trim(),
+        customerPhone: customerPhone.trim(),
+        deliveryAddress: deliveryAddress.trim(),
+        deliveryLat,
+        deliveryLng,
+        deliveryNotes: deliveryNotes.trim(),
+        paymentMethod,
+      });
+      addUserOrder(data.order);
       clearCart();
       onOrderSuccess(data.order);
     } catch (err) {
-      // Fallback order for demo mode
-      const mockOrder = {
-        id: Date.now(),
-        order_code: "CR-" + Math.floor(100000 + Math.random() * 900000),
-        business_id: BUSINESS?.id || 1,
-        customer_name: customerName,
-        customer_phone: customerPhone,
-        delivery_address: deliveryAddress,
-        delivery_lat: deliveryLat,
-        delivery_lng: deliveryLng,
-        delivery_notes: deliveryNotes,
-        currency,
-        payment_method: paymentMethod,
-        subtotal_usd: subtotalUsd,
-        delivery_fee_usd: deliveryFeeUsd,
-        total_usd: totalUsd,
-        total_in_currency: totalUsd * (EXCHANGE_RATES[currency]?.rate || 1),
-        items: cart,
-        status: "PENDIENTE",
-        created_at: new Date().toISOString(),
-      };
-      clearCart();
-      onOrderSuccess(mockOrder);
+      setError(
+        err.message ||
+          "No se pudo conectar con el servidor para enviar el pedido al administrador. Intenta de nuevo."
+      );
     } finally {
       setLoading(false);
     }
@@ -311,32 +322,44 @@ export default function CheckoutModal({ isOpen, onClose, onOrderSuccess }) {
                   </div>
                 ) : (
                   <div
-                    className={`p-3 sm:p-4 border rounded-xl sm:rounded-2xl flex items-start gap-3 ${
+                    className={`p-3 sm:p-4 border rounded-xl sm:rounded-2xl space-y-2.5 ${
                       isDark
                         ? "bg-zinc-900/90 border-zinc-800"
                         : "bg-zinc-50 border-zinc-200"
                     }`}
                   >
-                    <div className="w-9 h-9 rounded-xl bg-orange-500/10 text-orange-500 flex items-center justify-center flex-shrink-0 border border-orange-500/30">
-                      <MapPin className="w-4 h-4" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span
-                        className={`text-xs font-bold block break-words ${isDark ? "text-white" : "text-zinc-900"}`}
-                      >
-                        {deliveryAddress ||
-                          "Haga clic en Pin Mapa para marcar su casa"}
-                      </span>
-                      {deliveryNotes && (
-                        <span
-                          className={`text-[11px] block mt-0.5 ${isDark ? "text-zinc-400" : "text-zinc-600"}`}
-                        >
-                          Ref: {deliveryNotes}
+                    <div className="flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-orange-500/10 text-orange-500 flex items-center justify-center flex-shrink-0 border border-orange-500/30 mt-0.5">
+                        <MapPin className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1 min-w-0 space-y-2">
+                        <input
+                          type="text"
+                          required
+                          value={deliveryAddress}
+                          onChange={(e) => setDeliveryAddress(e.target.value)}
+                          placeholder="Escribe tu dirección exacta o usa Pin Mapa"
+                          className={`w-full border rounded-xl px-3 py-2 text-base sm:text-xs font-bold focus:outline-none focus:border-orange-500 ${
+                            isDark
+                              ? "bg-zinc-950 border-zinc-800 text-white placeholder-zinc-500"
+                              : "bg-white border-zinc-300 text-zinc-900 placeholder-zinc-400"
+                          }`}
+                        />
+                        <input
+                          type="text"
+                          value={deliveryNotes}
+                          onChange={(e) => setDeliveryNotes(e.target.value)}
+                          placeholder="Referencia (ej. Casa rejas blancas, piso 2) — opcional"
+                          className={`w-full border rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:border-orange-500 ${
+                            isDark
+                              ? "bg-zinc-950 border-zinc-800 text-zinc-300 placeholder-zinc-500"
+                              : "bg-white border-zinc-300 text-zinc-700 placeholder-zinc-400"
+                          }`}
+                        />
+                        <span className="text-[10px] text-amber-500 font-mono block">
+                          GPS: {Number(deliveryLat || 0).toFixed(4)}, {Number(deliveryLng || 0).toFixed(4)}
                         </span>
-                      )}
-                      <span className="text-[10px] text-amber-500 font-mono mt-0.5 block">
-                        GPS: {deliveryLat.toFixed(4)}, {deliveryLng.toFixed(4)}
-                      </span>
+                      </div>
                     </div>
                   </div>
                 )}

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { ShoppingBag, User, UtensilsCrossed, ChefHat, Globe, Menu, X, Sun, Moon } from 'lucide-react';
+import { ShoppingBag, User, UtensilsCrossed, ChefHat, Globe, Menu, X, Sun, Moon, ClipboardList } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useCurrency, EXCHANGE_RATES } from '../context/CurrencyContext';
 import { useTheme } from '../context/ThemeContext';
+import { useOrders } from '../context/OrdersContext';
 import { BUSINESS } from '../App';
 
 export default function Navbar({ viewMode, setViewMode }) {
@@ -11,6 +12,7 @@ export default function Navbar({ viewMode, setViewMode }) {
   const { user, setIsAuthModalOpen, logout } = useAuth();
   const { currency, setCurrency } = useCurrency();
   const { isDark, toggleTheme } = useTheme();
+  const { myOrders, activeUserOrdersCount, setIsMyOrdersOpen, pendingOrdersCount } = useOrders();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -92,10 +94,32 @@ export default function Navbar({ viewMode, setViewMode }) {
             </select>
           </div>
 
+          {/* My Orders button - sm+ */}
+          <button
+            onClick={() => setIsMyOrdersOpen(true)}
+            className={`hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-2xl font-bold text-xs border transition relative ${
+              isDark
+                ? 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white'
+                : 'bg-zinc-100 border-zinc-300 text-zinc-700 hover:text-zinc-900'
+            }`}
+          >
+            <ClipboardList className="w-4 h-4 text-orange-500" />
+            <span className="hidden lg:inline">Mis Pedidos</span>
+            {(activeUserOrdersCount > 0 || myOrders.length > 0) && (
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+                activeUserOrdersCount > 0
+                  ? 'bg-orange-500 text-white'
+                  : isDark ? 'bg-zinc-800 text-zinc-300' : 'bg-zinc-200 text-zinc-700'
+              }`}>
+                {activeUserOrdersCount > 0 ? activeUserOrdersCount : myOrders.length}
+              </span>
+            )}
+          </button>
+
           {/* Kitchen button - sm+ only */}
           <button
             onClick={() => setViewMode(viewMode === 'kitchen' ? 'menu' : 'kitchen')}
-            className={`hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-2xl font-bold text-xs border transition ${
+            className={`hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-2xl font-bold text-xs border transition relative ${
               viewMode === 'kitchen'
                 ? 'bg-amber-500 text-black border-amber-400 shadow-md shadow-amber-500/30'
                 : isDark 
@@ -103,8 +127,13 @@ export default function Navbar({ viewMode, setViewMode }) {
                   : 'bg-zinc-100 border-zinc-300 text-zinc-700 hover:text-zinc-900'
             }`}
           >
-            <ChefHat className="w-4 h-4 text-amber-500" />
+            <ChefHat className={`w-4 h-4 ${viewMode === 'kitchen' ? 'text-black' : 'text-amber-500'}`} />
             <span className="hidden lg:inline">{viewMode === 'kitchen' ? 'Ver Menú' : 'Cocina / Admin'}</span>
+            {pendingOrdersCount > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full bg-red-600 text-white text-[10px] font-black animate-pulse shadow">
+                {pendingOrdersCount}
+              </span>
+            )}
           </button>
 
           {/* User Button */}
@@ -154,11 +183,14 @@ export default function Navbar({ viewMode, setViewMode }) {
           {/* Hamburger Menu - mobile only */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className={`sm:hidden border p-2 rounded-xl transition flex-shrink-0 ${
+            className={`relative sm:hidden border p-2 rounded-xl transition flex-shrink-0 ${
               isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-300' : 'bg-zinc-100 border-zinc-300 text-zinc-800'
             }`}
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {pendingOrdersCount > 0 && !mobileMenuOpen && (
+              <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-red-600 animate-ping" />
+            )}
           </button>
         </div>
       </div>
@@ -209,6 +241,24 @@ export default function Navbar({ viewMode, setViewMode }) {
           </button>
 
 
+          {/* My Orders mobile */}
+          <button
+            onClick={() => { setIsMyOrdersOpen(true); setMobileMenuOpen(false); }}
+            className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl font-bold text-xs border transition ${
+              isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-200' : 'bg-zinc-100 border-zinc-300 text-zinc-800'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <ClipboardList className="w-4 h-4 text-orange-500" />
+              <span>Mis Pedidos ({myOrders.length})</span>
+            </div>
+            {activeUserOrdersCount > 0 && (
+              <span className="text-[10px] bg-orange-500 text-white px-2 py-0.5 rounded-full font-black">
+                {activeUserOrdersCount} activos
+              </span>
+            )}
+          </button>
+
           {/* Kitchen toggle mobile */}
           <button
             onClick={() => { setViewMode(viewMode === 'kitchen' ? 'menu' : 'kitchen'); setMobileMenuOpen(false); }}
@@ -218,8 +268,13 @@ export default function Navbar({ viewMode, setViewMode }) {
                 : isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-300' : 'bg-zinc-100 border-zinc-300 text-zinc-800'
             }`}
           >
-            <ChefHat className="w-4 h-4 text-amber-500" />
+            <ChefHat className={`w-4 h-4 ${viewMode === 'kitchen' ? 'text-black' : 'text-amber-500'}`} />
             <span>{viewMode === 'kitchen' ? 'Ver Menú Principal' : 'Panel Cocina / Admin'}</span>
+            {pendingOrdersCount > 0 && (
+              <span className="bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse">
+                {pendingOrdersCount} nuevos
+              </span>
+            )}
           </button>
 
           {/* Auth mobile */}

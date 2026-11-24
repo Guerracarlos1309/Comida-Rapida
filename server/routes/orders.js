@@ -58,6 +58,17 @@ ${itemsText}
   };
 }
 
+function normalizeOrderRecord(order) {
+  if (!order) return order;
+  if (typeof order.items === 'string') {
+    try { order.items = JSON.parse(order.items); } catch(e){}
+  }
+  if (typeof order.created_at === 'string' && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(order.created_at)) {
+    order.created_at = order.created_at.replace(' ', 'T') + 'Z';
+  }
+  return order;
+}
+
 // Export router factory so Socket.io can be injected
 module.exports = function(io) {
   
@@ -90,7 +101,19 @@ module.exports = function(io) {
       const totalUsdNum = subtotalNum + feeNum;
       const totalInCurrencyNum = totalUsdNum * rate;
 
-      const orderCode = 'CR-' + Math.floor(100000 + Math.random() * 900000);
+      // Generate collision-safe unique order code
+      let orderCode = '';
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const candidate = 'CR-' + Math.floor(100000 + Math.random() * 900000);
+        const existing = await query('SELECT id FROM orders WHERE order_code = $1', [candidate]);
+        if (!existing || existing.length === 0) {
+          orderCode = candidate;
+          break;
+        }
+      }
+      if (!orderCode) {
+        orderCode = 'CR-' + String(Date.now()).slice(-6);
+      }
 
       // Save to database
       const insertRes = await query(
@@ -128,10 +151,7 @@ module.exports = function(io) {
         createdOrder = fetchOrder[0];
       }
 
-      // Parse items JSON if string
-      if (typeof createdOrder.items === 'string') {
-        try { createdOrder.items = JSON.parse(createdOrder.items); } catch(e){}
-      }
+      createdOrder = normalizeOrderRecord(createdOrder);
 
       // Get WhatsApp payload
       const whatsapp = generateWhatsAppMessage(createdOrder);
@@ -155,28 +175,36 @@ module.exports = function(io) {
   // GET /api/orders - Get orders (for kitchen dashboard or customer history)
   router.get('/', async (req, res) => {
     try {
-      const { user_id, status } = req.query;
+      const { user_id, status, codes } = req.query;
       let sql = 'SELECT * FROM orders ';
       const params = [];
 
       if (user_id) {
         sql += 'WHERE user_id = $1 ';
         params.push(user_id);
+      } else if (codes) {
+        const codeList = String(codes)
+          .split(',')
+          .map(c => c.trim())
+          .filter(Boolean);
+        if (codeList.length > 0) {
+          const placeholders = codeList.map((_, idx) => `$${idx + 1}`).join(', ');
+          sql += `WHERE order_code IN (${placeholders}) `;
+          params.push(...codeList);
+        }
       } else if (status) {
         sql += 'WHERE status = $1 ';
         params.push(status);
       }
 
-      sql += 'ORDER BY created_at DESC LIMIT 50';
+      sql += 'ORDER BY created_at DESC, id DESC LIMIT 100';
 
       const orders = await query(sql, params);
       
       const parsedOrders = orders.map(o => {
-        if (typeof o.items === 'string') {
-          try { o.items = JSON.parse(o.items); } catch(e){}
-        }
-        o.whatsapp = generateWhatsAppMessage(o);
-        return o;
+        const normalized = normalizeOrderRecord(o);
+        normalized.whatsapp = generateWhatsAppMessage(normalized);
+        return normalized;
       });
 
       return res.json(parsedOrders);
@@ -198,11 +226,11 @@ module.exports = function(io) {
 
       await query('UPDATE orders SET status = $1 WHERE id = $2', [status, id]);
       const updated = await query('SELECT * FROM orders WHERE id = $1', [id]);
-      
-      let order = updated[0];
-      if (typeof order.items === 'string') {
-        try { order.items = JSON.parse(order.items); } catch(e){}
+      if (!updated || updated.length === 0) {
+        return res.status(404).json({ error: 'Pedido no encontrado' });
       }
+
+      const order = normalizeOrderRecord(updated[0]);
 
       // Broadcast socket update
       if (io) {

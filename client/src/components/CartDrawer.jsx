@@ -1,12 +1,12 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ShoppingBag, Trash2, Plus, Minus, ArrowRight } from 'lucide-react';
+import { X, ShoppingBag, Trash2, Plus, Minus, ArrowRight, Edit3, Copy } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useCurrency } from '../context/CurrencyContext';
 import { useTheme } from '../context/ThemeContext';
 import { BUSINESS } from '../App';
 
-export default function CartDrawer({ onProceedToCheckout }) {
+export default function CartDrawer({ onProceedToCheckout, onEditCartItem, onDuplicateCartItem }) {
   const { cart, isCartOpen, setIsCartOpen, removeFromCart, updateQuantity, subtotalUsd } = useCart();
   const { formatPrice, currency, EXCHANGE_RATES } = useCurrency();
   const { isDark } = useTheme();
@@ -141,9 +141,47 @@ export default function CartDrawer({ onProceedToCheckout }) {
                       </div>
                     )}
 
-                    {/* Quantity controls */}
-                    <div className="flex items-center justify-between">
-                      <span className={`text-[10px] uppercase font-bold ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>Cantidad:</span>
+                    {/* Quantity and Item Edit/Clone controls */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                      <div className="flex items-center gap-1.5">
+                        {onEditCartItem && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsCartOpen(false);
+                              onEditCartItem(item);
+                            }}
+                            title="Editar este producto"
+                            className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold border flex items-center gap-1 transition active:scale-95 ${
+                              isDark
+                                ? 'bg-zinc-950 border-zinc-700 text-zinc-200 hover:border-orange-500 hover:text-orange-400'
+                                : 'bg-white border-zinc-300 text-zinc-700 hover:border-orange-500 hover:text-orange-600'
+                            }`}
+                          >
+                            <Edit3 className="w-3 h-3" />
+                            <span>Editar</span>
+                          </button>
+                        )}
+                        {onDuplicateCartItem && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsCartOpen(false);
+                              onDuplicateCartItem(item);
+                            }}
+                            title="Pedir otro igual o cambiando solo un detalle"
+                            className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold border flex items-center gap-1 transition active:scale-95 ${
+                              isDark
+                                ? 'bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20'
+                                : 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100'
+                            }`}
+                          >
+                            <Copy className="w-3 h-3" />
+                            <span>Otro / Cambiar</span>
+                          </button>
+                        )}
+                      </div>
+
                       <div className={`flex items-center gap-2 border px-2 py-1 rounded-xl ${
                         isDark ? 'bg-black border-zinc-800' : 'bg-white border-zinc-300'
                       }`}>

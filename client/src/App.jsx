@@ -3,6 +3,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { CartProvider, useCart } from "./context/CartContext";
 import { CurrencyProvider, useCurrency } from "./context/CurrencyContext";
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
+import { OrdersProvider, useOrders } from "./context/OrdersContext";
 import { ShoppingBag } from "lucide-react";
 
 import Navbar from "./components/Navbar";
@@ -13,6 +14,8 @@ import CheckoutModal from "./components/CheckoutModal";
 import ItemModal from "./components/ItemModal";
 import AuthModal from "./components/AuthModal";
 import OrderTracker from "./components/OrderTracker";
+import MyOrdersModal from "./components/MyOrdersModal";
+import AdminAlertToasts from "./components/AdminAlertToasts";
 import AdminDashboard from "./components/AdminDashboard";
 import Footer from "./components/Footer";
 
@@ -35,11 +38,12 @@ function MainApp() {
   const { isDark } = useTheme();
   const { totalItemsCount, subtotalUsd, isCartOpen, setIsCartOpen } = useCart();
   const { formatPrice } = useCurrency();
+  const { isMyOrdersOpen, setIsMyOrdersOpen } = useOrders();
 
   const [viewMode, setViewMode] = useState("menu"); // 'menu' or 'kitchen'
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [activeTrackerOrder, setActiveTrackerOrder] = useState(null);
-  const [selectedItemForModal, setSelectedItemForModal] = useState(null);
+  const [itemModalConfig, setItemModalConfig] = useState(null);
 
   const handleExploreMenu = () => {
     setViewMode("menu");
@@ -64,12 +68,22 @@ function MainApp() {
       {/* Navbar */}
       <Navbar viewMode={viewMode} setViewMode={setViewMode} />
 
+      {/* Global real-time admin order alerts */}
+      <AdminAlertToasts
+        viewMode={viewMode}
+        onOpenAdmin={() => setViewMode("kitchen")}
+      />
+
       {/* Main Content */}
       <main className="flex-1">
         {viewMode === "menu" ? (
           <>
             <Hero onExploreMenu={handleExploreMenu} />
-            <MenuSection onSelectItem={(item) => setSelectedItemForModal(item)} />
+            <MenuSection
+              onSelectItem={(item) =>
+                setItemModalConfig({ item, mode: "add", editingCartItemId: null })
+              }
+            />
           </>
         ) : (
           <AdminDashboard />
@@ -85,7 +99,8 @@ function MainApp() {
         !isCartOpen &&
         !isCheckoutOpen &&
         !activeTrackerOrder &&
-        !selectedItemForModal && (
+        !isMyOrdersOpen &&
+        !itemModalConfig && (
           <div className="sm:hidden fixed bottom-4 left-4 right-4 z-40">
             <button
               onClick={() => setIsCartOpen(true)}
@@ -108,12 +123,32 @@ function MainApp() {
         )}
 
       {/* Global Modals & Drawers */}
-      <ItemModal
-        item={selectedItemForModal}
-        onClose={() => setSelectedItemForModal(null)}
-      />
+      {itemModalConfig?.item && (
+        <ItemModal
+          item={itemModalConfig.item}
+          mode={itemModalConfig.mode}
+          editingCartItemId={itemModalConfig.editingCartItemId}
+          onClose={() => setItemModalConfig(null)}
+        />
+      )}
 
-      <CartDrawer onProceedToCheckout={() => setIsCheckoutOpen(true)} />
+      <CartDrawer
+        onProceedToCheckout={() => setIsCheckoutOpen(true)}
+        onEditCartItem={(cartItem) =>
+          setItemModalConfig({
+            item: cartItem,
+            mode: "edit",
+            editingCartItemId: cartItem.cartItemId,
+          })
+        }
+        onDuplicateCartItem={(cartItem) =>
+          setItemModalConfig({
+            item: cartItem,
+            mode: "duplicate",
+            editingCartItemId: null,
+          })
+        }
+      />
 
       <CheckoutModal
         isOpen={isCheckoutOpen}
@@ -123,9 +158,16 @@ function MainApp() {
 
       <AuthModal />
 
+      <MyOrdersModal
+        isOpen={isMyOrdersOpen}
+        onClose={() => setIsMyOrdersOpen(false)}
+        onSelectOrderForTracker={(order) => setActiveTrackerOrder(order)}
+      />
+
       <OrderTracker
         order={activeTrackerOrder}
         onClose={() => setActiveTrackerOrder(null)}
+        onOrderSelect={(newOrder) => setActiveTrackerOrder(newOrder)}
       />
     </div>
   );
@@ -135,11 +177,13 @@ export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <CurrencyProvider>
-          <CartProvider>
-            <MainApp />
-          </CartProvider>
-        </CurrencyProvider>
+        <OrdersProvider>
+          <CurrencyProvider>
+            <CartProvider>
+              <MainApp />
+            </CartProvider>
+          </CurrencyProvider>
+        </OrdersProvider>
       </AuthProvider>
     </ThemeProvider>
   );
